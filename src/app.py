@@ -113,11 +113,14 @@ app.layout = dbc.Container([
                     dcc.Textarea(
                         id='business-name',
                         style={'width': '100%', 'height': 30},
-                        placeholder='Select a State'
+                        placeholder='Select a State',
+                        value = 'Time Education Inc'
+
                     ),
                     html.Br(),
                     html.Label(['Street Address'], style={'color': '#0F5DB6', "font-weight": "bold"}
                     ),
+                    dcc.Textarea(id='address', value='Time Education Inc'),
                     dcc.Dropdown(
                         id='wine_variety',
                         value='select a variety', 
@@ -185,19 +188,19 @@ app.layout = dbc.Container([
             ], label='MDS Winery'),
     ])
 
-def grab_estimate(business):
-    business_df = df.query('BusinessName == @business')
-    value_of_interest = df.iloc[-1, -4]   # use -4 for employees, -3 for FeesPaid
-    return value_of_interest
-
-
+def calculate_scores(business):
+    scores = ['green', 'green', 'green', 'red']
+    return scores
 
 @app.callback(Output('pie-chart', 'figure'),
-             [Input('feature_type', 'value')])
-def plot_donut(score):
-    df_dict = {'feat': ['physical', 'online', 'governemnt', 'other'],
+             [Input('feature_type', 'value'),
+            Input('business-name', 'value')])
+def plot_donut(score, business):
+
+    score_list = calculate_scores(business)
+    df_dict = {'feat': ['physical', 'online', 'government', 'other'],
            'size': [25, 25 ,25,25],
-           'score' : ['red', 'green' ,'yellow', 'red']}
+           'score' : score_list}
 
     pie_df = pd.DataFrame(df_dict)
 
@@ -209,11 +212,21 @@ def plot_donut(score):
 
     return fig
 
+@app.callback(Output('address', 'value'),
+             [Input('business-name', 'value')])
+def update_address(business):
+    
+    business_df = df.query('BusinessName == @business')
+    house = business_df.iloc[-1, 13]
+    street = business_df.iloc[-1, 14]
+    
+    
+    return str(int(house))+' ' +street
+
 @app.callback(Output("histogram", "figure"),
              [Input('feature_type', 'value'),
              Input('business-name', 'value')])
 def plot_hist(xaxis, business):
-    print(business)
     business_df = df.query('BusinessName == @business')
     estimate = business_df.iloc[-1, -4] # use -4 for employees, -3 for FeesPaid
     type_value = business_df.iloc[0, 9]
