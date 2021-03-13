@@ -65,6 +65,7 @@ from flask import Flask
 server = Flask(__name__)
 app = dash.Dash(__name__,server=server,  external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
 app.server.config['SQLALCHEMY_DATABASE_URI'] = "postgres+psycopg2://postgres:one-percent@130.211.113.135:5432/postgres"
+app.server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app.server)
 
@@ -219,20 +220,6 @@ app.layout = dbc.Container([
                     dcc.Graph(id='pie-chart',
                              figure = {'layout': go.Layout(margin={'b': 0})})
                 ],)
-
-
-                # dbc.Col([
-                #         html.Br(),
-                #         html.Br(),
-                #         dbc.Row([create_card('card1', 'card 1 content')]),
-                #         dbc.Row([create_card('Card2','Card 2 Content')]),
-                #     ], md=2),
-                # dbc.Col([
-                #      html.Br(),
-                #      html.Br(),
-                #      dbc.Row([create_card('card3', 'card3 content')]),
-                #      dbc.Row([create_card('Card4','Card 4 Content')]),
-                #     ], md=4)
                 ]),
             dbc.Row([
                     dbc.Col([
@@ -259,12 +246,13 @@ app.layout = dbc.Container([
                     html.Br(), 
                     ],md = 6),
                 ]),
-            ], label='MDS Winery'),
+            ]),
     ])
 
 def grab_estimate(business):
-    business_df = df.query('BusinessName == @business')
-    value_of_interest = df.iloc[-1, -4]   # use -4 for employees, -3 for FeesPaid
+    business_df = df.query('businessname == @business')
+
+    value_of_interest = df.iloc[-1, -5]   # use -4 for employees, -3 for FeesPaid
     return value_of_interest
 
 
@@ -291,7 +279,10 @@ def plot_donut(score):
              Input('business-name', 'value')])
 def plot_hist(xaxis, business):
     print(business)
-    business_df = df.query('BusinessName == @business')
+    if not business:
+        business = "Golden Trim Enterprises Inc"
+    business_df = df.query('businessname == @business')
+    print(business_df.shape)
     estimate = business_df.iloc[-1, -4] # use -4 for employees, -3 for FeesPaid
     type_value = business_df.iloc[0, 9]
 
