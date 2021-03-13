@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output, State
 from vega_datasets import data
 import plotly as py
 import plotly.express as px
+import plotly.graph_objects as go
 
 alt.data_transformers.disable_max_rows()
 
@@ -21,9 +22,32 @@ alt.data_transformers.disable_max_rows()
 
 
 def create_card(header='Header', content='Card Content'): 
-    card = dbc.Card([dbc.CardHeader(header),
-        dbc.CardBody(html.Label([content]))])
+    
+    if header:
+        card = dbc.Card([dbc.CardHeader(header),
+            dbc.CardBody(html.Label([content]))])
+    elif not header:
+        card = dbc.Card([dbc.CardBody(html.Label([content]))])
     return card 
+
+
+def within_thresh(value, businesstype, column, data, sd_away=1):
+    '''returns the lower and upper thresholds and whether the input
+       falls within this threshold
+    '''
+    mean_df = data.groupby('BusinessType').mean()
+    sd_df = data.groupby('BusinessType').std()
+    
+    mean = mean_df.loc[businesstype, column]
+    sd = sd_df.loc[businesstype, column]
+    
+    upper_thresh = mean + sd_away*sd 
+    lower_thresh = mean - sd_away*sd
+    
+    if value > upper_thresh or value < lower_thresh: 
+        return lower_thresh, upper_thresh, False
+    else: 
+        return lower_thresh, upper_thresh, True
 
 
 app = dash.Dash(__name__ , external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -139,24 +163,6 @@ def toggle_collapse(n, is_open):
     return is_open
 
 
-def within_thresh(value, businesstype, column, data, sd_away=1):
-    '''returns the lower and upper thresholds and whether the input
-       falls within this threshold
-    '''
-    mean_df = data.groupby('BusinessType').mean()
-    sd_df = data.groupby('BusinessType').std()
-    
-    mean = mean_df.loc[businesstype, column]
-    sd = sd_df.loc[businesstype, column]
-    
-    upper_thresh = mean + sd_away*sd 
-    lower_thresh = mean - sd_away*sd
-    
-    if value > upper_thresh or value < lower_thresh: 
-        return lower_thresh, upper_thresh, False
-    else: 
-        return lower_thresh, upper_thresh, True
-
 
 app.layout = dbc.Container([
     dbc.Row([
@@ -178,17 +184,16 @@ app.layout = dbc.Container([
                 dbc.Col([
                     html.Br(),
                     html.Label([
-                        'State Selection'], style={
+                        'Company Name'], style={
                 'color': '#0F5DB6', "font-weight": "bold"
             }),
-                    dcc.Dropdown(
-                        id='province-widget',
-                        value='select your state',  
-                        multi=True,
+                    dcc.Textarea(
+                        id='business-name',
+                        style={'width': '100%', 'height': 30},
                         placeholder='Select a State'
                     ),
                     html.Br(),
-                    html.Label(['Wine Type'], style={'color': '#0F5DB6', "font-weight": "bold"}
+                    html.Label(['Street Address'], style={'color': '#0F5DB6', "font-weight": "bold"}
                     ),
                     dcc.Dropdown(
                         id='wine_variety',
@@ -197,24 +202,38 @@ app.layout = dbc.Container([
                         multi=True
                     ),
                     html.Br(),
-                    dbc.Button('Search', id = 'reset-btn-1', n_clicks=0, className='reset-btn-1'),                  
-                    ], style={'border': '1px solid', 'border-radius': 3, 'padding': 15, 'margin-top': 22, 'margin-bottom': 15, 'margin-right': 0, 'height' : 300}, md=4,
+                    html.Label(['Search Url'], style={'color': '#0F5DB6', "font-weight": "bold"}),
+                    dcc.Textarea(style={'width': '100%', 'height': 30}),
+                    dbc.Button('Web Search', id = 'scrape-btn', n_clicks=0, className='reset-btn-1'),
+                    ], style={'border': '1px solid', 'border-radius': 3, 'padding': 15, 'margin-top': 22, 'margin-bottom': 15, 'margin-right': 0, 'height' : 350}, md=4,
                 ),
-                dbc.Col([], md = 2),
+                dbc.Col([], md=1),
                 dbc.Col([
-                        html.Br(),
-                        html.Br(),
-                        dbc.Row([create_card('card1', 'card 1 content')]),
-                        dbc.Row([create_card('Card2','Card 2 Content')]),
-                    ], md=2),
-                 dbc.Col([
-                     html.Br(),
-                     html.Br(),
-                     dbc.Row([create_card('card3', 'card3 content')]),
-                     dbc.Row([create_card('Card4','Card 4 Content')]),
-                    ], md=4)
+                    html.Br(),
+                    html.Br(),
+                    dbc.Row([create_card(None, 'This is where the score will go')]),
+                    html.Br(),
+                    dbc.Row([create_card(None,'This will be the number of outlier pts')]),
+                ], md = 2),
+                dbc.Col([
+                    dcc.Graph(id='pie-chart',
+                             figure = {'layout': go.Layout(margin={'b': 0})})
+                ],)
+
+
+                # dbc.Col([
+                #         html.Br(),
+                #         html.Br(),
+                #         dbc.Row([create_card('card1', 'card 1 content')]),
+                #         dbc.Row([create_card('Card2','Card 2 Content')]),
+                #     ], md=2),
+                # dbc.Col([
+                #      html.Br(),
+                #      html.Br(),
+                #      dbc.Row([create_card('card3', 'card3 content')]),
+                #      dbc.Row([create_card('Card4','Card 4 Content')]),
+                #     ], md=4)
                 ]),
-                html.Br(),
             dbc.Row([
                     dbc.Col([
                         dbc.Card([
@@ -224,7 +243,8 @@ app.layout = dbc.Container([
                             dbc.CardBody(
                                 id='highest_value', style={'color': '#522889', 'fontSize': 18,  'height': '380px'}),
                         ]),
-                    ], md = 6),
+                    ], md = 4),
+                    dbc.Col([], md = 2),
                     dbc.Col([
                     dbc.Row([
                             dcc.Graph(id='histogram'),         
@@ -242,14 +262,42 @@ app.layout = dbc.Container([
             ], label='MDS Winery'),
     ])
 
+def grab_estimate(business):
+    business_df = df.query('BusinessName == @business')
+    value_of_interest = df.iloc[-1, -4]   # use -4 for employees, -3 for FeesPaid
+    return value_of_interest
+
+
+
+@app.callback(Output('pie-chart', 'figure'),
+             [Input('feature_type', 'value')])
+def plot_donut(score):
+    df_dict = {'feat': ['physical', 'online', 'governemnt', 'other'],
+           'size': [25, 25 ,25,25],
+           'score' : ['red', 'green' ,'yellow', 'red']}
+
+    pie_df = pd.DataFrame(df_dict)
+
+    fig = go.Figure(data=[go.Pie(labels=pie_df['feat'],
+                             values=[25,25,25,25])])
+    fig.update_traces(hoverinfo='label+percent', textinfo='label', textfont_size=20,
+                    marker=dict(colors=pie_df['score'], line=dict(color='#000000', width=1)))
+    fig.update_layout(showlegend=False)
+
+    return fig
 
 @app.callback(Output("histogram", "figure"),
-             [Input('feature_type', 'value')])
-def rotate_figure(xaxis):
+             [Input('feature_type', 'value'),
+             Input('business-name', 'value')])
+def plot_hist(xaxis, business):
+    print(business)
+    business_df = df.query('BusinessName == @business')
+    estimate = business_df.iloc[-1, -4] # use -4 for employees, -3 for FeesPaid
+    type_value = business_df.iloc[0, 9]
 
     xaxis = 'NumberofEmployees'
     type_value = 'Office'
-    lower_thresh, upper_thresh, _ = within_thresh(10, type_value, xaxis, df, 1)
+    lower_thresh, upper_thresh, _ = within_thresh(estimate, type_value, xaxis, df, 1)
     hist_data = df.query('BusinessType == @type_value').loc[:, xaxis]
     xrange = None
     fig = px.histogram(hist_data, x = xaxis,height=400)
@@ -264,6 +312,12 @@ def rotate_figure(xaxis):
         type= 'line',
         yref= 'paper', y0= 0, y1= 1,
         xref= 'x', x0= upper_thresh, x1=upper_thresh
+        ),
+        dict(
+        type= 'line',
+        line_color='red',
+        yref= 'paper', y0= 0, y1= 1,
+        xref= 'x', x0= estimate, x1=estimate
         )
     ])
     return fig
