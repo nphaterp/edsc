@@ -110,10 +110,9 @@ app.layout = dbc.Container([
                         'Company Name'], style={
                 'color': '#0F5DB6', "font-weight": "bold"
             }),
-                    dcc.Dropdown(
-                        id='province-widget',
-                        value='select your state',  
-                        multi=True,
+                    dcc.Textarea(
+                        id='business-name',
+                        style={'width': '100%', 'height': 30},
                         placeholder='Select a State'
                     ),
                     html.Br(),
@@ -186,6 +185,12 @@ app.layout = dbc.Container([
             ], label='MDS Winery'),
     ])
 
+def grab_estimate(business):
+    business_df = df.query('BusinessName == @business')
+    value_of_interest = df.iloc[-1, -4]   # use -4 for employees, -3 for FeesPaid
+    return value_of_interest
+
+
 
 @app.callback(Output('pie-chart', 'figure'),
              [Input('feature_type', 'value')])
@@ -205,12 +210,17 @@ def plot_donut(score):
     return fig
 
 @app.callback(Output("histogram", "figure"),
-             [Input('feature_type', 'value')])
-def rotate_figure(xaxis):
+             [Input('feature_type', 'value'),
+             Input('business-name', 'value')])
+def plot_hist(xaxis, business):
+    print(business)
+    business_df = df.query('BusinessName == @business')
+    estimate = business_df.iloc[-1, -4] # use -4 for employees, -3 for FeesPaid
+    type_value = business_df.iloc[0, 9]
 
     xaxis = 'NumberofEmployees'
     type_value = 'Office'
-    lower_thresh, upper_thresh, _ = within_thresh(10, type_value, xaxis, df, 1)
+    lower_thresh, upper_thresh, _ = within_thresh(estimate, type_value, xaxis, df, 1)
     hist_data = df.query('BusinessType == @type_value').loc[:, xaxis]
     xrange = None
     fig = px.histogram(hist_data, x = xaxis,height=400)
@@ -225,6 +235,12 @@ def rotate_figure(xaxis):
         type= 'line',
         yref= 'paper', y0= 0, y1= 1,
         xref= 'x', x0= upper_thresh, x1=upper_thresh
+        ),
+        dict(
+        type= 'line',
+        line_color='red',
+        yref= 'paper', y0= 0, y1= 1,
+        xref= 'x', x0= estimate, x1=estimate
         )
     ])
     return fig
