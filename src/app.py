@@ -120,13 +120,8 @@ app.layout = dbc.Container([
                     html.Br(),
                     html.Label(['Street Address'], style={'color': '#0F5DB6', "font-weight": "bold"}
                     ),
+                    html.Br(),
                     dcc.Textarea(id='address', value='Time Education Inc'),
-                    dcc.Dropdown(
-                        id='wine_variety',
-                        value='select a variety', 
-                        placeholder='Select a Variety', 
-                        multi=True
-                    ),
                     html.Br(),
                     html.Label(['Search Url'], style={'color': '#0F5DB6', "font-weight": "bold"}),
                     dcc.Textarea(style={'width': '100%', 'height': 30}),
@@ -166,8 +161,7 @@ app.layout = dbc.Container([
                             dbc.CardHeader('Key Insights:', 
                             style={'fontWeight': 'bold', 'color':'white','font-size': '22px', 'backgroundColor':'#0F5DB6', 'height': '50px'}),
                             dbc.CardBody(id='highest_value_name', style={'color': '#2EC9F0', 'fontSize': 18,  'height': '70px'}),
-                            dbc.CardBody(
-                                id='highest_value', style={'color': '#522889', 'fontSize': 18,  'height': '380px'}),
+                            dbc.CardBody(id='insight-1', style={'color': '#522889', 'fontSize': 18,  'height': '380px'}),
                         ]),
                     ], md = 4),
                     dbc.Col([], md = 2),
@@ -187,6 +181,34 @@ app.layout = dbc.Container([
                 ]),
             ], label='MDS Winery'),
     ])
+
+
+@app.callback(Output('insight-1', 'children'),
+             Input('business-name', 'value'))
+def url_presence(business):
+    website = 'www.google.com'
+    # business_df = df.query('BusinessName == @business')
+    # website = business_df.iloc[-1, 'website']
+    if website:
+        insight = f"Website: {website}"
+    if website:
+        insight = 'No website available'
+    return insight
+
+@app.callback(Output('insight-2', 'children'),
+             Input('business-name', 'value'))
+def time_online(business):
+    
+    website = 'www.google.com'
+    # business_df = df.query('BusinessName == @business')
+    # website = business_df.iloc[-1, 'website']
+    if website:
+        insight = f"Website: {website}"
+    if website:
+        insight = 'No website available'
+    return insight
+
+
 
 def calculate_scores(business):
     scores = ['green', 'green', 'green', 'red']
